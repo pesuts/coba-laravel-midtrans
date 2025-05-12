@@ -12,7 +12,10 @@ Route::get('/nona', function(){
 });
 
 Route::get('/payment', [PaymentController::class, 'index']);
+Route::post('/payment', [PaymentController::class, 'process']);
 
-Route::post('/payment/charge', [PaymentController::class, 'charge']);
+Route::post('/midtrans/callback', [PaymentController::class, 'callback']);
 
-Route::post('/payment/notification', [PaymentController::class, 'notification']);
+// Route::post('/payment/charge', [PaymentController::class, 'charge']);
+
+// Route::post('/payment/notification', [PaymentController::class, 'notification']);

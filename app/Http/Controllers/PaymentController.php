@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
+use App\Models\Transaction;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Midtrans\Snap;
+use Midtrans\Config;
 use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
@@ -13,73 +17,85 @@ class PaymentController extends Controller
         return view('payment');
     }
 
-    // public function notification(Request $request)
-    // {
-    //     // $serverKey = config('midtrans.server_key');
-    //     $serverKey = env('MIDTRANS_SERVER_KEY');
-    //     $signatureKey = hash('sha512', $request->order_id.$request->status_code.$request->gross_amount.$serverKey);
-
-    //     if ($signatureKey !== $request->signature_key) {
-    //         return response('Invalid signature', 403);
-    //     }
-
-    //     // Proses status seperti capture, settlement, pending, cancel, etc.
-    //     if ($request->transaction_status === 'settlement') {
-    //         // update payment status jadi paid
-    //     }
-
-    //     return response('OK', 200);
-    // }
-
-    public function notification(Request $request)
+    public function process(Request $request)
     {
-        $data = $request->all(); // atau gunakan json_decode
-        $serverKey = env('MIDTRANS_SERVER_KEY');
+        Config::$serverKey = config('midtrans.server_key');
+        Config::$isProduction = config('midtrans.is_production');
+        Config::$isSanitized = config('midtrans.sanitize');
+        Config::$is3ds = config('midtrans.enable_3ds');
 
-        // Validasi signature
-        $signature = hash('sha512', 
-            $data['order_id'] . 
-            $data['status_code'] . 
-            $data['gross_amount'] . 
-            $serverKey
-        );
+        $orderId = 'order_' . rand();  
+        $gross = rand(1, 10) * 10000;  
+        $userId = rand(1, 4);  
 
-        if ($signature !== $data['signature_key']) {
-            Log::warning('Midtrans callback: Invalid signature', $data);
-            return response('Invalid signature', 403);
-        }
-
-        Log::info('Midtrans callback received', $data);
-
-        if ($data['transaction_status'] === 'settlement') {
-            // update payment status
-            // Contoh: Order::where('order_id', $data['order_id'])->update(['status' => 'paid']);
-        }
-
-        return response('OK', 200);
-    }
-
-    public function charge(Request $request)
-    {
+        // Menyiapkan parameter untuk Midtrans Snap API
         $params = [
             'transaction_details' => [
-                'order_id' => uniqid(),
-                'gross_amount' => 10000,
+                'order_id' => $orderId,
+                'gross_amount' => $gross,
             ],
             'customer_details' => [
-                'first_name' => 'John',
-                'last_name' => 'Doe',
-                'email' => 'johndoe@example.com',
-                'phone' => '08123456789',
+                'user_id' => $userId,
             ],
         ];
 
-        try {
-            $snapToken = Snap::getSnapToken($params);
-            return response()->json(['snap_token' => $snapToken]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+        $order = Order::create([
+            'order_id' => $orderId,
+            'total_amount' => $gross,
+            'status' => 'pending',  
+            'user_id' => $userId,
+        ]);
+
+        $transaction = Transaction::create([
+            'order_id' => $orderId, 
+            'transaction_id' => 'transaction_' . $orderId,
+            'payment_type' => 'bank_transfer',
+            'gross_amount' => $gross,
+            'transaction_status' => 'pending', 
+            'transaction_time' => Carbon::now(),
+        ]);
+
+        $snapToken = Snap::getSnapToken($params);
+
+        return view('payment', compact('snapToken'));
+    }
+
+    // Callback untuk menangani hasil transaksi dari Midtrans
+    public function callback(Request $request)
+    {
+        $serverKey = config('midtrans.server_key');
+        $signatureKey = hash('sha512', 
+            $request->order_id . 
+            $request->status_code . 
+            $request->gross_amount . 
+            $serverKey
+        );
+
+        if ($signatureKey != $request->signature_key) {
+            return response()->json(['message' => 'Invalid Signature'], 403);
         }
+
+        $transaction = Transaction::updateOrCreate(
+            ['order_id' => $request->order_id],
+            [
+                'transaction_id' => $request->transaction_id,
+                'payment_type' => $request->payment_type,
+                'gross_amount' => $request->gross_amount,
+                'transaction_status' => $request->transaction_status,
+                'transaction_time' => $request->transaction_time,
+            ]
+        );
+
+        if ($transaction->transaction_status == 'settlement') {
+            $order = Order::where('order_id', $request->order_id)->first();
+            if ($order) {
+                $order->status = 'paid';
+                $order->save();
+            }
+        }
+
+        Log::info('🔥 Midtrans Callback Masuk:', $request->all());
+
+        return response()->json(['message' => 'OK'], 200);
     }
 }
-

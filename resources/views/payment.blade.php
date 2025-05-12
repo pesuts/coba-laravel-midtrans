@@ -1,30 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Midtrans Payment</title>
+    <title>Payment Page</title>
     <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ env('MIDTRANS_CLIENT_KEY') }}"></script>
 </head>
 <body>
-    <button id="pay-button">Pay Now</button>
+    <h1>Pembayaran</h1>
+    <form method="POST" action="/payment">
+        @csrf
+        <button type="submit">Dapatkan Snap Token</button>
+    </form>
 
-    <script>
-        document.getElementById('pay-button').onclick = function () {
-            fetch('/payment/charge', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.snap_token) {
-                    snap.pay(data.snap_token);
-                } else {
-                    alert('Payment failed: ' + data.error);
-                }
-            });
-        };
+    @isset($snapToken)
+    <script type="text/javascript">
+        snap.pay('{{ $snapToken }}', {
+            onSuccess: function(result){ console.log('success', result); },
+            onPending: function(result){ console.log('pending', result); },
+            onError: function(result){ console.log('error', result); }
+        });
     </script>
+    @endisset
 </body>
 </html>
