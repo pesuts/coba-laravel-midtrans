@@ -1,10 +1,15 @@
 <?php
 
 use App\Http\Controllers\PaymentController;
+use App\Models\Order;
+use App\Models\Transaction;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('home', [
+      'orders' => Order::latest()->get(), 
+      'transactions' => Transaction::latest()->get(), 
+    ]);
 });
 
 Route::get('/nona', function(){
