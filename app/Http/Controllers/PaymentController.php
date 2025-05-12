@@ -26,7 +26,7 @@ class PaymentController extends Controller
 
         $orderId = 'order_' . rand();  
         $gross = rand(1, 10) * 10000;  
-        $userId = rand(1, 4);  
+        $userId = rand(1, 3);  
 
         // Menyiapkan parameter untuk Midtrans Snap API
         $params = [

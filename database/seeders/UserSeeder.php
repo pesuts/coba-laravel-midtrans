@@ -31,6 +31,14 @@ class UserSeeder extends Seeder
         'email_verified_at' => now(),
       ]);
 
+      User::create([
+        'name' => 'Mama Mia',
+        'email' => 'mia@mail.com',
+        'password' => Hash::make('password'),
+        'remember_token' => Str::random(10),
+        'email_verified_at' => now(),
+      ]);
+
       // User::factory(2)->create();
     }
 }
