@@ -23,6 +23,14 @@ class UserSeeder extends Seeder
         'email_verified_at' => now(),
       ]);
 
-      User::factory(2)->create();
+      User::create([
+        'name' => 'john',
+        'email' => 'john@doe.com',
+        'password' => Hash::make('password'),
+        'remember_token' => Str::random(10),
+        'email_verified_at' => now(),
+      ]);
+
+      // User::factory(2)->create();
     }
 }
