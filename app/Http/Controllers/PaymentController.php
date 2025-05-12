@@ -75,14 +75,14 @@ class PaymentController extends Controller
             return response()->json(['message' => 'Invalid Signature'], 403);
         }
 
-        $order = Order::updateOrCreate(
-          ['order_id' => $request->order_id],
-        [
-            // 'order_id' => $request->orderId,
-            'total_amount' => $request->gross_amount,
-            'status' => 'paid',  
-            'user_id' => 2,
-        ]);
+        // $order = Order::updateOrCreate(
+        //   ['order_id' => $request->order_id],
+        // [
+        //     // 'order_id' => $request->orderId,
+        //     'total_amount' => $request->gross_amount,
+        //     'status' => 'paid',  
+        //     'user_id' => 2,
+        // ]);
 
         $transaction = Transaction::updateOrCreate(
             ['order_id' => $request->order_id],
